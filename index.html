@@ -51,10 +51,6 @@
         }
         .btn-primary:hover { opacity: 0.9; }
         .btn-disabled { background-color: #474d57 !important; cursor: not-allowed; opacity: 0.6; }
-
-        .btn-action {
-            @apply flex-1 py-3 rounded font-bold text-xs uppercase tracking-wider transition-all active:scale-95;
-        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -73,7 +69,7 @@
         <div class="flex items-center gap-8">
             <div id="bot-status" class="hidden md:flex flex-col items-end">
                 <span class="text-[10px] font-bold text-gray-500 uppercase">Sistem Durumu</span>
-                <span id="status-text" class="text-xs font-bold text-gray-500">BAĞLANILIYOR...</span>
+                <span id="status-text" class="text-xs font-bold text-gray-500">BAĞLANILIYOR</span>
             </div>
             <button onclick="toggleBot()" id="btn-main" class="btn-primary px-8 py-2.5 rounded-md font-bold text-sm shadow-lg">
                 YÜKLENİYOR
@@ -82,14 +78,13 @@
     </header>
 
     <main class="flex-1 p-6 grid grid-cols-12 gap-6 overflow-hidden">
-        
-
+  
         <div class="col-span-12 lg:col-span-3 flex flex-col gap-6">
             <div class="card-panel p-6 rounded-xl">
                 <div class="text-[11px] text-gray-400 font-bold mb-2 tracking-wider">BTC/USDT CANLI</div>
                 <div id="price" class="text-3xl font-bold mono tracking-tighter">$0.00</div>
                 <div id="price-change" class="text-xs mt-2 font-bold px-2 py-1 rounded inline-block bg-gray-800 text-gray-400">
-                    BORSA BAĞLANTISI...
+                    BORSA BAĞLANTISI
                 </div>
             </div>
 
@@ -113,20 +108,10 @@
                         <div id="net-pnl" class="text-2xl font-bold mono text-gray-500">$0.00</div>
                     </div>
                 </div>
-
-           
-                <div class="flex gap-2 mt-6">
-                    <button id="btn-manual-buy" onclick="manualBuy()" class="flex-1 py-3 rounded font-bold text-xs uppercase bg-success/20 text-success border border-success/30 hover:bg-success hover:text-black transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                        <i class="fa-solid fa-cart-plus mr-1"></i> Manuel Al
-                    </button>
-                    <button id="btn-manual-sell" onclick="manualSell()" class="flex-1 py-3 rounded font-bold text-xs uppercase bg-danger/20 text-danger border border-danger/30 hover:bg-danger hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                        <i class="fa-solid fa-hand-holding-dollar mr-1"></i> Manuel Sat
-                    </button>
-                </div>
             </div>
         </div>
 
- 
+   
         <div class="col-span-12 lg:col-span-5 flex flex-col gap-6">
             <div id="position-card" class="card-panel flex-1 rounded-xl flex flex-col overflow-hidden relative">
                 <div class="bg-[#1e2329] px-6 py-4 border-b border-gray-800 flex justify-between items-center">
@@ -173,11 +158,11 @@
             </div>
         </div>
 
-  
+   
         <div class="col-span-12 lg:col-span-4 flex flex-col gap-6 overflow-hidden">
             <div class="card-panel flex-1 rounded-xl flex flex-col overflow-hidden">
                 <div class="bg-[#1e2329] px-6 py-4 border-b border-gray-800 font-bold text-xs text-gray-400 uppercase tracking-widest">
-                    Küresel İşlem Geçmişi
+                    İşlem Geçmişi
                 </div>
                 <div id="history" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
             </div>
@@ -200,6 +185,7 @@
         import { getFirestore, doc, onSnapshot, updateDoc, setDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+        // GÜNCEL KİMLİK BİLGİLERİ
         const firebaseConfig = {
             apiKey: "AIzaSyDpNKkeCmkJB4-w1zyD9PZ8WDrCFfzUrjc",
             authDomain: "mesajger-7d7af.firebaseapp.com",
@@ -215,6 +201,7 @@
         const auth = getAuth(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'ybg13-global-trading-v1';
         
+        // Firestore Path (RULE 1: Çift segment)
         const globalStateDoc = doc(db, 'artifacts', appId, 'globalData', 'currentStatus');
         const historyColl = collection(db, 'artifacts', appId, 'tradeHistory');
 
@@ -236,37 +223,46 @@
 
         async function init() {
             try {
+                
                 await signInAnonymously(auth);
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         runtime.authReady = true;
-                        log("Cloud bağlantısı kuruldu.", "text-success font-bold");
+                        log("Cloud bağlantısı kuruldu. (Anonim)", "text-success font-bold");
                         setupSync();
                     }
                 });
             } catch (e) { 
                 log("AUTH HATASI: " + e.message, "text-danger");
+ 
                 setupSync(); 
             }
         }
 
         function setupSync() {
+
             onSnapshot(globalStateDoc, (snap) => {
                 if (snap.exists()) {
                     state = snap.data();
                     updateUI();
                 } else if (runtime.authReady) {
-                    setDoc(globalStateDoc, state);
+                   
+                    setDoc(globalStateDoc, state).catch(e => log("Veri oluşturulamadı: " + e.message, "text-danger"));
                 }
                 document.getElementById('user-count').innerText = "BAĞLANTI: STABLE (CLOUD SYNC)";
-            }, (e) => log("Cloud Okuma Hatası", "text-danger"));
+            }, (e) => {
+                log("Cloud Okuma Hatası: " + e.code, "text-danger");
+            });
 
+         
             onSnapshot(historyColl, (snap) => {
                 const trades = [];
                 snap.forEach(d => trades.push(d.data()));
                 trades.sort((a,b) => b.timestamp - a.timestamp);
                 renderHistory(trades);
-            }, (e) => log("Geçmiş Verisi Hatası", "text-gray-600"));
+            }, (e) => {
+                log("Geçmiş Verisi Alınamadı.", "text-gray-600");
+            });
         }
 
         async function getPrice() {
@@ -283,7 +279,9 @@
                 
                 if(state.active && runtime.authReady) processLogic(p, avg);
                 updateUI();
-            } catch (e) { log("Binance API Hatası", "text-danger"); }
+            } catch (e) {
+                log("Fiyat çekilemedi (Binance API)", "text-danger");
+            }
         }
 
         async function processLogic(p, avg) {
@@ -291,58 +289,39 @@
             const diff = ((p - avg) / avg) * 100;
 
             if(state.btc === 0 && diff <= CONFIG.BUY_OFFSET) {
-                executeBuy(p);
-            } else if(state.btc > 0) {
+                const amount = (state.usdt * CONFIG.RISK) / p;
+                await updateDoc(globalStateDoc, { 
+                    entry: p, 
+                    btc: amount, 
+                    usdt: state.usdt - (state.usdt * CONFIG.RISK) 
+                }).then(() => log("GLOBAL ALIM TETİKLENDİ", "text-success font-bold"));
+            } 
+
+            else if(state.btc > 0) {
                 const lpnl = ((p - state.entry) / state.entry) * CONFIG.LEVERAGE;
                 if(lpnl >= (CONFIG.SELL_OFFSET * CONFIG.LEVERAGE)/100 || lpnl <= -0.50) {
-                    executeSell(p);
+                    const profit = (state.entry * state.btc) * lpnl;
+                    const finalBalance = state.usdt + (state.entry * state.btc) + profit;
+                    
+                  
+                    await setDoc(doc(historyColl), { 
+                        entry: state.entry, 
+                        exit: p, 
+                        pnl: profit, 
+                        timestamp: Date.now(), 
+                        time: new Date().toLocaleTimeString() 
+                    });
+
+                
+                    await updateDoc(globalStateDoc, { 
+                        usdt: finalBalance, 
+                        totalPnl: state.totalPnl + profit, 
+                        btc: 0, 
+                        entry: 0 
+                    }).then(() => log("GLOBAL SATIŞ TETİKLENDİ", "text-white font-bold"));
                 }
             }
         }
-
-        async function executeBuy(price) {
-            if(!runtime.authReady || state.btc > 0) return;
-            const amount = (state.usdt * CONFIG.RISK) / price;
-            await updateDoc(globalStateDoc, { 
-                entry: price, 
-                btc: amount, 
-                usdt: state.usdt - (state.usdt * CONFIG.RISK) 
-            }).then(() => log("ALIM GERÇEKLEŞTİ: $" + price, "text-success font-bold"));
-        }
-
-        async function executeSell(price) {
-            if(!runtime.authReady || state.btc === 0) return;
-            const lpnl = ((price - state.entry) / state.entry) * CONFIG.LEVERAGE;
-            const profit = (state.entry * state.btc) * lpnl;
-            const finalBalance = state.usdt + (state.entry * state.btc) + profit;
-            
-            await setDoc(doc(historyColl), { 
-                entry: state.entry, 
-                exit: price, 
-                pnl: profit, 
-                timestamp: Date.now(), 
-                time: new Date().toLocaleTimeString() 
-            });
-
-            await updateDoc(globalStateDoc, { 
-                usdt: finalBalance, 
-                totalPnl: state.totalPnl + profit, 
-                btc: 0, 
-                entry: 0 
-            }).then(() => log("SATIŞ GERÇEKLEŞTİ: $" + price, "text-white font-bold"));
-        }
-
-        window.manualBuy = () => {
-            if(confirm("Manuel olarak piyasa fiyatından ALIM yapmak istediğinize emin misiniz?")) {
-                executeBuy(runtime.currentPrice);
-            }
-        };
-
-        window.manualSell = () => {
-            if(confirm("Manuel olarak piyasa fiyatından SATIŞ yapmak istediğinize emin misiniz?")) {
-                executeSell(runtime.currentPrice);
-            }
-        };
 
         function updateUI() {
             document.getElementById('usdt').innerText = `$${state.usdt.toLocaleString(undefined, {minimumFractionDigits:2})}`;
@@ -357,20 +336,17 @@
             pnlEl.innerText = `$${state.totalPnl.toFixed(2)}`;
             pnlEl.className = `text-2xl font-bold mono ${state.totalPnl >= 0 ? 'text-success' : 'text-danger'}`;
 
-    
-            const btnMain = document.getElementById('btn-main');
-            const btnMAl = document.getElementById('btn-manual-buy');
-            const btnMSat = document.getElementById('btn-manual-sell');
+            const btn = document.getElementById('btn-main');
+            const statusText = document.getElementById('status-text');
             
             if(!runtime.authReady) {
-                btnMain.innerText = "YÜKLENİYOR...";
-                btnMain.classList.add('btn-disabled');
-                btnMAl.disabled = btnMSat.disabled = true;
+                btn.innerText = "BAĞLANILIYOR...";
+                btn.classList.add('btn-disabled');
+                statusText.innerText = "YETKİ BEKLENİYOR";
             } else {
-                btnMain.innerText = state.active ? "OTOMATİK BOTU DURDUR" : "OTOMATİK BOTU BAŞLAT";
-                btnMain.classList.remove('btn-disabled');
-                btnMAl.disabled = state.btc > 0;
-                btnMSat.disabled = state.btc === 0;
+                btn.innerText = state.active ? "SİSTEMİ DURDUR (GLOBAL)" : "SİSTEMİ BAŞLAT (GLOBAL)";
+                btn.classList.remove('btn-disabled');
+                statusText.innerText = state.active ? "KÜRESEL BOT AKTİF" : "BOT DURDURULDU";
             }
             
             if(state.btc > 0) {
@@ -418,8 +394,10 @@
             if(runtime.authReady) {
                 const newState = !state.active;
                 updateDoc(globalStateDoc, { active: newState }).then(() => {
-                    log(newState ? "BOT AKTİF EDİLDİ" : "BOT DEVRE DIŞI BIRAKILDI", newState ? "text-danger font-bold" : "text-gray-400");
+                    log(newState ? "BOT BAŞLATILDI" : "BOT OLARAK DURDURULDU", newState ? "text-danger font-bold" : "text-gray-400");
                 });
+            } else {
+                log("Hata: Firebase bağlantısı hazır değil.", "text-danger");
             }
         };
 
