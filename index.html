@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEGEN BTC AI - Cloud Sync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0e11;
+            color: #eaecef;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .card-panel {
+            background: #181a20;
+            border: 1px solid #2b2f36;
+            transition: all 0.3s ease;
+        }
+
+        .risk-active {
+            border: 1px solid #f6465d !important;
+            box-shadow: 0 0 20px rgba(246, 70, 93, 0.1);
+            animation: danger-pulse 2s infinite;
+        }
+
+        @keyframes danger-pulse {
+            0% { border-color: #f6465d; }
+            50% { border-color: #7d1a27; }
+            100% { border-color: #f6465d; }
+        }
+
+        .text-success { color: #0ecb81; }
+        .text-danger { color: #f6465d; }
+        .bg-success { background-color: #0ecb81; }
+        .bg-danger { background-color: #f6465d; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #181a20; }
+        ::-webkit-scrollbar-thumb { background: #474d57; border-radius: 10px; }
+        
+        .btn-primary {
+            background-color: #f0b90b;
+            color: #181a20;
+            transition: opacity 0.2s;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-disabled { background-color: #474d57 !important; cursor: not-allowed; opacity: 0.6; }
+
+        .btn-action {
+            @apply flex-1 py-3 rounded font-bold text-xs uppercase tracking-wider transition-all active:scale-95;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <header class="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-[#181a20]">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-[#f0b90b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-cloud text-[#181a20] text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-tight">DEGEN-AI <span class="text-[#f0b90b] text-sm">CLOUD</span></h1>
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Global Shared Terminal</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-8">
+            <div id="bot-status" class="hidden md:flex flex-col items-end">
+                <span class="text-[10px] font-bold text-gray-500 uppercase">Sistem Durumu</span>
+                <span id="status-text" class="text-xs font-bold text-gray-500">BAĞLANILIYOR...</span>
+            </div>
+            <button onclick="toggleBot()" id="btn-main" class="btn-primary px-8 py-2.5 rounded-md font-bold text-sm shadow-lg">
+                YÜKLENİYOR
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 p-6 grid grid-cols-12 gap-6 overflow-hidden">
+        
+
+        <div class="col-span-12 lg:col-span-3 flex flex-col gap-6">
+            <div class="card-panel p-6 rounded-xl">
+                <div class="text-[11px] text-gray-400 font-bold mb-2 tracking-wider">BTC/USDT CANLI</div>
+                <div id="price" class="text-3xl font-bold mono tracking-tighter">$0.00</div>
+                <div id="price-change" class="text-xs mt-2 font-bold px-2 py-1 rounded inline-block bg-gray-800 text-gray-400">
+                    BORSA BAĞLANTISI...
+                </div>
+            </div>
+
+            <div class="card-panel p-6 rounded-xl flex-1 flex flex-col">
+                <div class="mb-6">
+                    <div class="text-[11px] text-gray-400 font-bold mb-1 uppercase tracking-wider">Küresel Bakiye</div>
+                    <div id="total-balance" class="text-3xl font-bold mono">$0.00</div>
+                </div>
+                
+                <div class="space-y-5 pt-6 border-t border-gray-800 flex-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-gray-400 font-medium tracking-wide">Havuz (USDT)</span>
+                        <span id="usdt" class="text-sm font-bold mono text-gray-200">$0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-gray-400 font-medium tracking-wide">Varlık (BTC)</span>
+                        <span id="btc" class="text-sm font-bold mono text-gray-200">0.000000</span>
+                    </div>
+                    <div class="pt-4 border-t border-gray-800">
+                        <div class="text-[11px] text-gray-400 font-bold mb-1">TOPLAM KÂR / ZARAR</div>
+                        <div id="net-pnl" class="text-2xl font-bold mono text-gray-500">$0.00</div>
+                    </div>
+                </div>
+
+           
+                <div class="flex gap-2 mt-6">
+                    <button id="btn-manual-buy" onclick="manualBuy()" class="flex-1 py-3 rounded font-bold text-xs uppercase bg-success/20 text-success border border-success/30 hover:bg-success hover:text-black transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-cart-plus mr-1"></i> Manuel Al
+                    </button>
+                    <button id="btn-manual-sell" onclick="manualSell()" class="flex-1 py-3 rounded font-bold text-xs uppercase bg-danger/20 text-danger border border-danger/30 hover:bg-danger hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-hand-holding-dollar mr-1"></i> Manuel Sat
+                    </button>
+                </div>
+            </div>
+        </div>
+
+ 
+        <div class="col-span-12 lg:col-span-5 flex flex-col gap-6">
+            <div id="position-card" class="card-panel flex-1 rounded-xl flex flex-col overflow-hidden relative">
+                <div class="bg-[#1e2329] px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Global Açık Pozisyon</span>
+                    <span id="pos-type" class="text-[10px] font-bold px-3 py-1 rounded-full bg-gray-800 text-gray-400">YÜKLENİYOR</span>
+                </div>
+
+                <div id="no-pos" class="flex-1 flex flex-col items-center justify-center text-center p-8">
+                    <div class="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center mb-6">
+                        <i class="fa-solid fa-satellite-dish text-2xl text-gray-600"></i>
+                    </div>
+                    <div class="text-sm font-bold text-gray-400 uppercase tracking-widest">Sinyal Aranıyor...</div>
+                </div>
+
+                <div id="active-pos" class="hidden flex-1 p-8 flex flex-col">
+                    <div class="flex justify-between items-start mb-10">
+                        <div>
+                            <div class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Giriş Fiyatı</div>
+                            <div id="entry-price" class="text-2xl font-bold mono">$0.00</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Kaldıraç</div>
+                            <div class="text-2xl font-bold text-[#f0b90b]">10x</div>
+                        </div>
+                    </div>
+
+                    <div class="text-center flex-1 flex flex-col justify-center">
+                        <div class="text-[11px] text-gray-400 font-bold mb-2 uppercase tracking-[0.3em]">Gerçekleşmemiş PNL</div>
+                        <div id="unrealized-pnl" class="text-6xl font-black mono tracking-tighter">$0.00</div>
+                        <div id="unrealized-percent" class="text-2xl font-bold mt-4">0.00%</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-8 border-t border-gray-800 pt-6 mt-6">
+                        <div>
+                            <div class="text-[11px] text-gray-500 uppercase font-bold">Büyüklük</div>
+                            <div id="pos-amount" class="text-sm font-bold mono">0.00 BTC</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[11px] text-gray-500 uppercase font-bold">Likidasyon</div>
+                            <div id="liq-price" class="text-sm font-bold mono text-danger">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+  
+        <div class="col-span-12 lg:col-span-4 flex flex-col gap-6 overflow-hidden">
+            <div class="card-panel flex-1 rounded-xl flex flex-col overflow-hidden">
+                <div class="bg-[#1e2329] px-6 py-4 border-b border-gray-800 font-bold text-xs text-gray-400 uppercase tracking-widest">
+                    Küresel İşlem Geçmişi
+                </div>
+                <div id="history" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+            </div>
+
+            <div class="h-32 bg-black/40 rounded-xl border border-gray-800 p-4 font-mono text-[11px] overflow-hidden">
+                <div id="terminal" class="space-y-1 text-gray-500 overflow-y-auto h-full">
+                    <div>> Firebase veritabanına bağlanılıyor...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-[#181a20] border-t border-gray-800 px-6 py-4 flex justify-between items-center text-[11px] text-gray-500 font-medium">
+        <div>©2026 <span class="text-gray-300 font-bold">YBG13™</span> - Global Cloud System</div>
+        <div id="user-count" class="text-[#0ecb81]">BAĞLANTI: BEKLENİYOR</div>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDpNKkeCmkJB4-w1zyD9PZ8WDrCFfzUrjc",
+            authDomain: "mesajger-7d7af.firebaseapp.com",
+            projectId: "mesajger-7d7af",
+            storageBucket: "mesajger-7d7af.firebasestorage.app",
+            messagingSenderId: "433074782256",
+            appId: "1:433074782256:web:c7251b88c00f86d182edf5",
+            measurementId: "G-BC5LS6C50S"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ybg13-global-trading-v1';
+        
+        const globalStateDoc = doc(db, 'artifacts', appId, 'globalData', 'currentStatus');
+        const historyColl = collection(db, 'artifacts', appId, 'tradeHistory');
+
+        const CONFIG = { LEVERAGE: 10, RISK: 1.0, BUY_OFFSET: -0.005, SELL_OFFSET: 0.008, UPDATE_MS: 1000 };
+        let state = { active: false, usdt: 10000, btc: 0, entry: 0, totalPnl: 0 };
+        let runtime = { currentPrice: 0, sma: [], authReady: false };
+
+        const log = (msg, color = "text-gray-500") => {
+            const div = document.createElement('div');
+            div.className = color;
+            div.innerText = `> ${new Date().toLocaleTimeString()} ${msg}`;
+            const t = document.getElementById('terminal');
+            if(t) {
+                t.appendChild(div);
+                t.scrollTop = t.scrollHeight;
+                if(t.children.length > 30) t.removeChild(t.firstChild);
+            }
+        };
+
+        async function init() {
+            try {
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        runtime.authReady = true;
+                        log("Cloud bağlantısı kuruldu.", "text-success font-bold");
+                        setupSync();
+                    }
+                });
+            } catch (e) { 
+                log("AUTH HATASI: " + e.message, "text-danger");
+                setupSync(); 
+            }
+        }
+
+        function setupSync() {
+            onSnapshot(globalStateDoc, (snap) => {
+                if (snap.exists()) {
+                    state = snap.data();
+                    updateUI();
+                } else if (runtime.authReady) {
+                    setDoc(globalStateDoc, state);
+                }
+                document.getElementById('user-count').innerText = "BAĞLANTI: STABLE (CLOUD SYNC)";
+            }, (e) => log("Cloud Okuma Hatası", "text-danger"));
+
+            onSnapshot(historyColl, (snap) => {
+                const trades = [];
+                snap.forEach(d => trades.push(d.data()));
+                trades.sort((a,b) => b.timestamp - a.timestamp);
+                renderHistory(trades);
+            }, (e) => log("Geçmiş Verisi Hatası", "text-gray-600"));
+        }
+
+        async function getPrice() {
+            try {
+                const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+                const data = await res.json();
+                const p = parseFloat(data.price);
+                runtime.currentPrice = p;
+                runtime.sma.push(p);
+                if(runtime.sma.length > 5) runtime.sma.shift();
+                
+                const avg = runtime.sma.reduce((a,b)=>a+b,0) / runtime.sma.length;
+                document.getElementById('price').innerText = `$${p.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                
+                if(state.active && runtime.authReady) processLogic(p, avg);
+                updateUI();
+            } catch (e) { log("Binance API Hatası", "text-danger"); }
+        }
+
+        async function processLogic(p, avg) {
+            if(!runtime.authReady) return;
+            const diff = ((p - avg) / avg) * 100;
+
+            if(state.btc === 0 && diff <= CONFIG.BUY_OFFSET) {
+                executeBuy(p);
+            } else if(state.btc > 0) {
+                const lpnl = ((p - state.entry) / state.entry) * CONFIG.LEVERAGE;
+                if(lpnl >= (CONFIG.SELL_OFFSET * CONFIG.LEVERAGE)/100 || lpnl <= -0.50) {
+                    executeSell(p);
+                }
+            }
+        }
+
+        async function executeBuy(price) {
+            if(!runtime.authReady || state.btc > 0) return;
+            const amount = (state.usdt * CONFIG.RISK) / price;
+            await updateDoc(globalStateDoc, { 
+                entry: price, 
+                btc: amount, 
+                usdt: state.usdt - (state.usdt * CONFIG.RISK) 
+            }).then(() => log("ALIM GERÇEKLEŞTİ: $" + price, "text-success font-bold"));
+        }
+
+        async function executeSell(price) {
+            if(!runtime.authReady || state.btc === 0) return;
+            const lpnl = ((price - state.entry) / state.entry) * CONFIG.LEVERAGE;
+            const profit = (state.entry * state.btc) * lpnl;
+            const finalBalance = state.usdt + (state.entry * state.btc) + profit;
+            
+            await setDoc(doc(historyColl), { 
+                entry: state.entry, 
+                exit: price, 
+                pnl: profit, 
+                timestamp: Date.now(), 
+                time: new Date().toLocaleTimeString() 
+            });
+
+            await updateDoc(globalStateDoc, { 
+                usdt: finalBalance, 
+                totalPnl: state.totalPnl + profit, 
+                btc: 0, 
+                entry: 0 
+            }).then(() => log("SATIŞ GERÇEKLEŞTİ: $" + price, "text-white font-bold"));
+        }
+
+        window.manualBuy = () => {
+            if(confirm("Manuel olarak piyasa fiyatından ALIM yapmak istediğinize emin misiniz?")) {
+                executeBuy(runtime.currentPrice);
+            }
+        };
+
+        window.manualSell = () => {
+            if(confirm("Manuel olarak piyasa fiyatından SATIŞ yapmak istediğinize emin misiniz?")) {
+                executeSell(runtime.currentPrice);
+            }
+        };
+
+        function updateUI() {
+            document.getElementById('usdt').innerText = `$${state.usdt.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            document.getElementById('btc').innerText = state.btc.toFixed(6);
+            
+            const upnl = state.btc > 0 ? (state.entry * state.btc) * (((runtime.currentPrice - state.entry) / state.entry) * CONFIG.LEVERAGE) : 0;
+            const liveTotal = state.usdt + (state.btc > 0 ? (state.entry * state.btc) + upnl : 0);
+            
+            document.getElementById('total-balance').innerText = `$${liveTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            
+            const pnlEl = document.getElementById('net-pnl');
+            pnlEl.innerText = `$${state.totalPnl.toFixed(2)}`;
+            pnlEl.className = `text-2xl font-bold mono ${state.totalPnl >= 0 ? 'text-success' : 'text-danger'}`;
+
+    
+            const btnMain = document.getElementById('btn-main');
+            const btnMAl = document.getElementById('btn-manual-buy');
+            const btnMSat = document.getElementById('btn-manual-sell');
+            
+            if(!runtime.authReady) {
+                btnMain.innerText = "YÜKLENİYOR...";
+                btnMain.classList.add('btn-disabled');
+                btnMAl.disabled = btnMSat.disabled = true;
+            } else {
+                btnMain.innerText = state.active ? "OTOMATİK BOTU DURDUR" : "OTOMATİK BOTU BAŞLAT";
+                btnMain.classList.remove('btn-disabled');
+                btnMAl.disabled = state.btc > 0;
+                btnMSat.disabled = state.btc === 0;
+            }
+            
+            if(state.btc > 0) {
+                document.getElementById('no-pos').classList.add('hidden');
+                document.getElementById('active-pos').classList.remove('hidden');
+                document.getElementById('entry-price').innerText = `$${state.entry.toLocaleString()}`;
+                document.getElementById('unrealized-pnl').innerText = (upnl >= 0 ? '+' : '') + `$${upnl.toFixed(2)}`;
+                document.getElementById('unrealized-pnl').className = `text-6xl font-black mono tracking-tighter ${upnl >= 0 ? 'text-success' : 'text-danger'}`;
+                
+                const per = (((runtime.currentPrice - state.entry) / state.entry) * CONFIG.LEVERAGE * 100);
+                document.getElementById('unrealized-percent').innerText = (per >= 0 ? '+' : '') + per.toFixed(2) + "%";
+                document.getElementById('unrealized-percent').className = `text-2xl font-bold mt-4 ${per >= 0 ? 'text-success' : 'text-danger'}`;
+                document.getElementById('liq-price').innerText = `$${(state.entry * 0.91).toLocaleString()}`;
+                document.getElementById('pos-amount').innerText = `${state.btc.toFixed(6)} BTC`;
+            } else {
+                document.getElementById('no-pos').classList.remove('hidden');
+                document.getElementById('active-pos').classList.add('hidden');
+            }
+        }
+
+        function renderHistory(trades) {
+            const h = document.getElementById('history');
+            if(!h) return;
+            h.innerHTML = '';
+            trades.slice(0, 15).forEach(t => {
+                const d = document.createElement('div');
+                const isWin = t.pnl >= 0;
+                d.className = `p-4 bg-[#1e2329] rounded-lg border-l-4 ${isWin ? 'border-success' : 'border-danger'} flex justify-between items-center`;
+                d.innerHTML = `
+                    <div>
+                        <div class="text-[10px] text-gray-500 font-bold uppercase">${t.time || 'İşlem'}</div>
+                        <div class="text-xs font-bold mono">${t.entry.toFixed(1)} → ${t.exit.toFixed(1)}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-black mono ${isWin ? 'text-success' : 'text-danger'}">
+                            ${isWin ? '+' : ''}${t.pnl.toFixed(2)}
+                        </div>
+                    </div>
+                `;
+                h.appendChild(d);
+            });
+        }
+
+        window.toggleBot = () => {
+            if(runtime.authReady) {
+                const newState = !state.active;
+                updateDoc(globalStateDoc, { active: newState }).then(() => {
+                    log(newState ? "BOT AKTİF EDİLDİ" : "BOT DEVRE DIŞI BIRAKILDI", newState ? "text-danger font-bold" : "text-gray-400");
+                });
+            }
+        };
+
+        init();
+        setInterval(getPrice, CONFIG.UPDATE_MS);
+    </script>
+</body>
+</html>
