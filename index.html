@@ -23,6 +23,18 @@
             transition: all 0.3s ease;
         }
 
+        .risk-active {
+            border: 1px solid #f6465d !important;
+            box-shadow: 0 0 20px rgba(246, 70, 93, 0.1);
+            animation: danger-pulse 2s infinite;
+        }
+
+        @keyframes danger-pulse {
+            0% { border-color: #f6465d; }
+            50% { border-color: #7d1a27; }
+            100% { border-color: #f6465d; }
+        }
+
         .text-success { color: #0ecb81; }
         .text-danger { color: #f6465d; }
         .bg-success { background-color: #0ecb81; }
@@ -39,11 +51,6 @@
         }
         .btn-primary:hover { opacity: 0.9; }
         .btn-disabled { background-color: #474d57 !important; cursor: not-allowed; opacity: 0.6; }
-
-        /* Yeni Buton Stilleri */
-        .btn-manual-buy { background-color: #0ecb81; color: #0b0e11; font-weight: 800; }
-        .btn-manual-sell { background-color: #f6465d; color: white; font-weight: 800; }
-        .btn-manual-buy:active, .btn-manual-sell:active { transform: scale(0.98); }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -62,7 +69,7 @@
         <div class="flex items-center gap-8">
             <div id="bot-status" class="hidden md:flex flex-col items-end">
                 <span class="text-[10px] font-bold text-gray-500 uppercase">Sistem Durumu</span>
-                <span id="status-text" class="text-xs font-bold text-gray-500">BAĞLANILIYOR</span>
+                <span id="status-text" class="text-xs font-bold text-gray-500">BAĞLANILIYOR...</span>
             </div>
             <button onclick="toggleBot()" id="btn-main" class="btn-primary px-8 py-2.5 rounded-md font-bold text-sm shadow-lg">
                 YÜKLENİYOR
@@ -77,7 +84,7 @@
                 <div class="text-[11px] text-gray-400 font-bold mb-2 tracking-wider">BTC/USDT CANLI</div>
                 <div id="price" class="text-3xl font-bold mono tracking-tighter">$0.00</div>
                 <div id="price-change" class="text-xs mt-2 font-bold px-2 py-1 rounded inline-block bg-gray-800 text-gray-400">
-                    BORSA BAĞLANTISI
+                    BORSA BAĞLANTISI...
                 </div>
             </div>
 
@@ -104,7 +111,7 @@
             </div>
         </div>
 
-   
+        <!-- Orta Panel -->
         <div class="col-span-12 lg:col-span-5 flex flex-col gap-6">
             <div id="position-card" class="card-panel flex-1 rounded-xl flex flex-col overflow-hidden relative">
                 <div class="bg-[#1e2329] px-6 py-4 border-b border-gray-800 flex justify-between items-center">
@@ -122,7 +129,7 @@
                 <div id="active-pos" class="hidden flex-1 p-8 flex flex-col">
                     <div class="flex justify-between items-start mb-10">
                         <div>
-                            <div class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Ort. Giriş Fiyatı</div>
+                            <div class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Giriş Fiyatı</div>
                             <div id="entry-price" class="text-2xl font-bold mono">$0.00</div>
                         </div>
                         <div class="text-right">
@@ -139,7 +146,7 @@
 
                     <div class="grid grid-cols-2 gap-8 border-t border-gray-800 pt-6 mt-6">
                         <div>
-                            <div class="text-[11px] text-gray-500 uppercase font-bold">Toplam Büyüklük</div>
+                            <div class="text-[11px] text-gray-500 uppercase font-bold">Büyüklük</div>
                             <div id="pos-amount" class="text-sm font-bold mono">0.00 BTC</div>
                         </div>
                         <div class="text-right">
@@ -149,26 +156,13 @@
                     </div>
                 </div>
             </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="manualAction('BUY')" class="btn-manual-buy py-4 rounded-xl flex flex-col items-center justify-center gap-1 shadow-lg shadow-green-900/10">
-                    <i class="fa-solid fa-bolt text-lg"></i>
-                    <span class="text-[10px] uppercase tracking-tighter">Hızlı Alım</span>
-                    <span class="text-xs font-black">MANUEL BUY</span>
-                </button>
-                <button onclick="manualAction('SELL')" class="btn-manual-sell py-4 rounded-xl flex flex-col items-center justify-center gap-1 shadow-lg shadow-red-900/10">
-                    <i class="fa-solid fa-fire text-lg"></i>
-                    <span class="text-[10px] uppercase tracking-tighter">Hızlı Satış</span>
-                    <span class="text-xs font-black">MANUEL SELL</span>
-                </button>
-            </div>
         </div>
 
-   
+        <!-- Sağ Panel -->
         <div class="col-span-12 lg:col-span-4 flex flex-col gap-6 overflow-hidden">
             <div class="card-panel flex-1 rounded-xl flex flex-col overflow-hidden">
                 <div class="bg-[#1e2329] px-6 py-4 border-b border-gray-800 font-bold text-xs text-gray-400 uppercase tracking-widest">
-                    İşlem Geçmişi
+                    Küresel İşlem Geçmişi
                 </div>
                 <div id="history" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
             </div>
@@ -191,24 +185,27 @@
         import { getFirestore, doc, onSnapshot, updateDoc, setDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+        // GÜNCEL KİMLİK BİLGİLERİ
         const firebaseConfig = {
-            apiKey: "AIzaSyB6rICfdikH6kEo8eHouOd-_174VubPsWQ",
-            authDomain: "yilan-oyunu-d5571.firebaseapp.com",
-            projectId: "yilan-oyunu-d5571",
-            storageBucket: "yilan-oyunu-d5571.firebasestorage.app",
-            messagingSenderId: "142767081423",
-            appId: "1:142767081423:web:05513c7ad51720509074ba"
+            apiKey: "AIzaSyDpNKkeCmkJB4-w1zyD9PZ8WDrCFfzUrjc",
+            authDomain: "mesajger-7d7af.firebaseapp.com",
+            projectId: "mesajger-7d7af",
+            storageBucket: "mesajger-7d7af.firebasestorage.app",
+            messagingSenderId: "433074782256",
+            appId: "1:433074782256:web:c7251b88c00f86d182edf5",
+            measurementId: "G-BC5LS6C50S"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        const appId = 'ybg13-global-trading-v1';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ybg13-global-trading-v1';
         
+        // Firestore Path (RULE 1: Çift segment)
         const globalStateDoc = doc(db, 'artifacts', appId, 'globalData', 'currentStatus');
         const historyColl = collection(db, 'artifacts', appId, 'tradeHistory');
 
-        const CONFIG = { LEVERAGE: 10, RISK: 0.2, BUY_OFFSET: -0.005, SELL_OFFSET: 0.008, UPDATE_MS: 1000 };
+        const CONFIG = { LEVERAGE: 10, RISK: 1.0, BUY_OFFSET: -0.005, SELL_OFFSET: 0.008, UPDATE_MS: 1000 };
         let state = { active: false, usdt: 10000, btc: 0, entry: 0, totalPnl: 0 };
         let runtime = { currentPrice: 0, sma: [], authReady: false };
 
@@ -226,33 +223,45 @@
 
         async function init() {
             try {
+                
                 await signInAnonymously(auth);
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         runtime.authReady = true;
-                        log("Cloud bağlantısı kuruldu. (YBG13™)", "text-success font-bold");
+                        log("Cloud bağlantısı kuruldu. (Anonim)", "text-success font-bold");
                         setupSync();
                     }
                 });
-            } catch (e) { log("AUTH HATASI: " + e.message, "text-danger"); }
+            } catch (e) { 
+                log("AUTH HATASI: " + e.message, "text-danger");
+ 
+                setupSync(); 
+            }
         }
 
         function setupSync() {
+
             onSnapshot(globalStateDoc, (snap) => {
                 if (snap.exists()) {
                     state = snap.data();
                     updateUI();
                 } else if (runtime.authReady) {
-                    setDoc(globalStateDoc, state);
+                   
+                    setDoc(globalStateDoc, state).catch(e => log("Veri oluşturulamadı: " + e.message, "text-danger"));
                 }
                 document.getElementById('user-count').innerText = "BAĞLANTI: STABLE (CLOUD SYNC)";
+            }, (e) => {
+                log("Cloud Okuma Hatası: " + e.code, "text-danger");
             });
 
+         
             onSnapshot(historyColl, (snap) => {
                 const trades = [];
                 snap.forEach(d => trades.push(d.data()));
                 trades.sort((a,b) => b.timestamp - a.timestamp);
                 renderHistory(trades);
+            }, (e) => {
+                log("Geçmiş Verisi Alınamadı.", "text-gray-600");
             });
         }
 
@@ -263,88 +272,56 @@
                 const p = parseFloat(data.price);
                 runtime.currentPrice = p;
                 runtime.sma.push(p);
-                if(runtime.sma.length > 10) runtime.sma.shift();
+                if(runtime.sma.length > 5) runtime.sma.shift();
                 
                 const avg = runtime.sma.reduce((a,b)=>a+b,0) / runtime.sma.length;
                 document.getElementById('price').innerText = `$${p.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                 
                 if(state.active && runtime.authReady) processLogic(p, avg);
                 updateUI();
-            } catch (e) { log("Fiyat hatası.", "text-danger"); }
+            } catch (e) {
+                log("Fiyat çekilemedi (Binance API)", "text-danger");
+            }
         }
 
         async function processLogic(p, avg) {
             if(!runtime.authReady) return;
             const diff = ((p - avg) / avg) * 100;
 
-            // Otomatik Kademeli Alım (Fiyat düşerse ve BTC yoksa veya ekleme yapılacaksa)
             if(state.btc === 0 && diff <= CONFIG.BUY_OFFSET) {
-                executeTrade('BUY');
+                const amount = (state.usdt * CONFIG.RISK) / p;
+                await updateDoc(globalStateDoc, { 
+                    entry: p, 
+                    btc: amount, 
+                    usdt: state.usdt - (state.usdt * CONFIG.RISK) 
+                }).then(() => log("GLOBAL ALIM TETİKLENDİ", "text-success font-bold"));
             } 
-            // Otomatik Satış (Hedef kâr veya stop loss)
+
             else if(state.btc > 0) {
                 const lpnl = ((p - state.entry) / state.entry) * CONFIG.LEVERAGE;
                 if(lpnl >= (CONFIG.SELL_OFFSET * CONFIG.LEVERAGE)/100 || lpnl <= -0.50) {
-                    executeTrade('SELL');
+                    const profit = (state.entry * state.btc) * lpnl;
+                    const finalBalance = state.usdt + (state.entry * state.btc) + profit;
+                    
+                  
+                    await setDoc(doc(historyColl), { 
+                        entry: state.entry, 
+                        exit: p, 
+                        pnl: profit, 
+                        timestamp: Date.now(), 
+                        time: new Date().toLocaleTimeString() 
+                    });
+
+                
+                    await updateDoc(globalStateDoc, { 
+                        usdt: finalBalance, 
+                        totalPnl: state.totalPnl + profit, 
+                        btc: 0, 
+                        entry: 0 
+                    }).then(() => log("GLOBAL SATIŞ TETİKLENDİ", "text-white font-bold"));
                 }
             }
         }
-
-        // --- MERKEZİ İŞLEM FONKSİYONU ---
-        async function executeTrade(type) {
-            if(!runtime.authReady) return;
-            const p = runtime.currentPrice;
-
-            if(type === 'BUY') {
-                const buyAmountUsdt = state.usdt * CONFIG.RISK;
-                if(buyAmountUsdt < 10) return log("Bakiye yetersiz (Min $10)", "text-danger");
-
-                const newBtc = buyAmountUsdt / p;
-                // Maliyet Ortalaması Hesaplama: ((Eski Fiyat * Eski Adet) + (Yeni Fiyat * Yeni Adet)) / Toplam Adet
-                const newEntry = ((state.entry * state.btc) + (p * newBtc)) / (state.btc + newBtc);
-
-                await updateDoc(globalStateDoc, { 
-                    entry: newEntry, 
-                    btc: state.btc + newBtc, 
-                    usdt: state.usdt - buyAmountUsdt 
-                }).then(() => log(`ALIM GERÇEKLEŞTİ: $${p}`, "text-success font-bold"));
-            } 
-            else if(type === 'SELL' && state.btc > 0) {
-                const lpnl = ((p - state.entry) / state.entry) * CONFIG.LEVERAGE;
-                const profit = (state.entry * state.btc) * lpnl;
-                const finalBalance = state.usdt + (state.entry * state.btc) + profit;
-
-                await setDoc(doc(historyColl), { 
-                    entry: state.entry, 
-                    exit: p, 
-                    pnl: profit, 
-                    timestamp: Date.now(), 
-                    time: new Date().toLocaleTimeString()
-                });
-
-                await updateDoc(globalStateDoc, { 
-                    usdt: finalBalance, 
-                    totalPnl: state.totalPnl + profit, 
-                    btc: 0, 
-                    entry: 0 
-                }).then(() => log(`SATIŞ GERÇEKLEŞTİ: $${p}`, "text-white font-bold"));
-            }
-        }
-
-        // Global fonksiyonlar
-        window.manualAction = (type) => {
-            log(`MANUEL ${type} İSTEĞİ GÖNDERİLDİ...`, "text-[#f0b90b]");
-            executeTrade(type);
-        };
-
-        window.toggleBot = () => {
-            if(runtime.authReady) {
-                const newState = !state.active;
-                updateDoc(globalStateDoc, { active: newState }).then(() => {
-                    log(newState ? "BOT AKTİF EDİLDİ" : "BOT DEVRE DIŞI", newState ? "text-danger font-bold" : "text-gray-400");
-                });
-            }
-        };
 
         function updateUI() {
             document.getElementById('usdt').innerText = `$${state.usdt.toLocaleString(undefined, {minimumFractionDigits:2})}`;
@@ -364,16 +341,18 @@
             
             if(!runtime.authReady) {
                 btn.innerText = "BAĞLANILIYOR...";
+                btn.classList.add('btn-disabled');
                 statusText.innerText = "YETKİ BEKLENİYOR";
             } else {
-                btn.innerText = state.active ? "OTOMATİĞİ DURDUR" : "OTOMATİĞİ BAŞLAT";
+                btn.innerText = state.active ? "SİSTEMİ DURDUR (GLOBAL)" : "SİSTEMİ BAŞLAT (GLOBAL)";
+                btn.classList.remove('btn-disabled');
                 statusText.innerText = state.active ? "KÜRESEL BOT AKTİF" : "BOT DURDURULDU";
             }
             
             if(state.btc > 0) {
                 document.getElementById('no-pos').classList.add('hidden');
                 document.getElementById('active-pos').classList.remove('hidden');
-                document.getElementById('entry-price').innerText = `$${state.entry.toLocaleString(undefined, {maximumFractionDigits:1})}`;
+                document.getElementById('entry-price').innerText = `$${state.entry.toLocaleString()}`;
                 document.getElementById('unrealized-pnl').innerText = (upnl >= 0 ? '+' : '') + `$${upnl.toFixed(2)}`;
                 document.getElementById('unrealized-pnl').className = `text-6xl font-black mono tracking-tighter ${upnl >= 0 ? 'text-success' : 'text-danger'}`;
                 
@@ -382,13 +361,9 @@
                 document.getElementById('unrealized-percent').className = `text-2xl font-bold mt-4 ${per >= 0 ? 'text-success' : 'text-danger'}`;
                 document.getElementById('liq-price').innerText = `$${(state.entry * 0.91).toLocaleString()}`;
                 document.getElementById('pos-amount').innerText = `${state.btc.toFixed(6)} BTC`;
-                document.getElementById('pos-type').innerText = "LONG / AKTİF";
-                document.getElementById('pos-type').className = "text-[10px] font-bold px-3 py-1 rounded-full bg-green-900/30 text-success";
             } else {
                 document.getElementById('no-pos').classList.remove('hidden');
                 document.getElementById('active-pos').classList.add('hidden');
-                document.getElementById('pos-type').innerText = "BOŞTA";
-                document.getElementById('pos-type').className = "text-[10px] font-bold px-3 py-1 rounded-full bg-gray-800 text-gray-400";
             }
         }
 
@@ -414,6 +389,17 @@
                 h.appendChild(d);
             });
         }
+
+        window.toggleBot = () => {
+            if(runtime.authReady) {
+                const newState = !state.active;
+                updateDoc(globalStateDoc, { active: newState }).then(() => {
+                    log(newState ? "BOT BAŞLATILDI" : "BOT OLARAK DURDURULDU", newState ? "text-danger font-bold" : "text-gray-400");
+                });
+            } else {
+                log("Hata: Firebase bağlantısı hazır değil.", "text-danger");
+            }
+        };
 
         init();
         setInterval(getPrice, CONFIG.UPDATE_MS);
